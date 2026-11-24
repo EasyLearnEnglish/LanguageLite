@@ -1,0 +1,37 @@
+name: Test install script
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  test-install:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Make install script executable
+        run: chmod +x install.sh
+
+      - name: Run install script
+        run: ./install.sh
+
+      - name: Test website responds
+        run: curl -fsS http://localhost/ > /dev/null
+
+      - name: Test cache is writable by PHP
+        run: docker compose exec -T php php -r "\$_SERVER['HTTP_HOST'] = 'localhost'; require 'src/Includes/bootstrap.php'; Aprelendo\\Cache::set('ci-cache-test', true);"
+
+      - name: Show Docker status
+        if: always()
+        run: |
+          docker compose ps
+          docker compose logs
+
+      - name: Shut down containers
+        if: always()
+        run: docker compose down -v
